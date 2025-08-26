@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alula Remote Triage Dispatcher</title>
+  <style>
+    :root{
+      --nav-bg:#0f2a22;
+      --nav-text:#cfe2dc;
+      --brand:#d9c06f;
+      --accent:#11a58b;
+      --bg:#f5f7f8;
+      --card:#ffffff;
+      --ink:#10231f;
+      --muted:#5a6a66;
+      --border:#e3e7ea;
+      --danger:#dc2626;
+      --warning:#f59e0b;
+      --good:#10b981;
+      --info:#3b82f6;
+      --purple:#8b5cf6;
+      
+      --level1:#10b981;
+      --level2:#3b82f6;
+      --level3:#f59e0b;
+      --level4:#dc2626;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; 
+      font-family: system-ui, -apple-system, sans-serif;
+      background:var(--bg); 
+      color:var(--ink);
+      line-height:1.5;
+    }
+    .header{
+      background:var(--nav-bg);
+      color:var(--nav-text);
+      padding:12px 24px;
+      display:flex;
+      align-items:center;
+      gap:16px;
+      border-bottom:2px solid rgba(255,255,255,0.1);
+    }
+    .logo{
+      width:28px;
+      height:28px;
+      background:linear-gradient(135deg, var(--brand), #ffe289);
+      border-radius:6px;
+    }
+    .title{
+      font-size:18px;
+      font-weight:600;
+      color:var(--brand);
+    }
+    .status-bar{
+      margin-left:auto;
+      display:flex;
+      gap:16px;
+      align-items:center;
+      font-size:14px;
+    }
+    .timer{
+      padding:4px 10px;
+      background:rgba(255,255,255,0.1);
+      border-radius:6px;
+      font-weight:500;
+    }
+    .container{
+      max-width:1600px;
+      margin:0 auto;
+      padding:20px;
+      display:grid;
+      grid-template-columns:400px 1fr 380px;
+      gap:20px;
+      height:calc(100vh - 60px);
+    }
+    .panel{
+      background:var(--card);
+      border-radius:12px;
+      border:1px solid var(--border);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+    }
+    .panel-header{
+      padding:14px 18px;
+      border-bottom:1px solid var(--border);
+      font-weight:600;
+      font-size:15px;
+      background:#fcfdfd;
+      flex-shrink:0;
+    }
+    .panel-body{
+      padding:16px;
+      overflow-y:auto;
+      flex:1;
+    }
+
+    /* Quick Assessment */
+    .quick-btn{
+      width:100%;
+      padding:12px;
+      margin-bottom:10px;
+      border:2px solid var(--border);
+      border-radius:8px;
+      background:white;
+      cursor:pointer;
+      text-align:left;
+      transition:all 0.15s;
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+    .quick-btn:hover{
+      border-color:var(--accent);
+      background:#f0fdf9;
+    }
+    .quick-btn.selected{
+      background:var(--accent);
+      color:white;
+      border-color:var(--accent);
+    }
+    .quick-btn.danger{
+      border-color:var(--danger);
+      background:#fef2f2;
+      color:var(--danger);
+    }
+    .quick-btn .icon{
+      font-size:20px;
+    }
+    .quick-btn .text{
+      flex:1;
+    }
+    .quick-btn .badge{
+      padding:2px 6px;
+      border-radius:4px;
+      font-size:11px;
+      background:rgba(0,0,0,0.1);
+    }
+
+    /* Question Flow */
+    .question-card{
+      background:#f9fafb;
+      border:1px solid var(--border);
+      border-radius:8px;
+      padding:14px;
+      margin-bottom:12px;
+    }
+    .question-card.active{
+      background:#fff7ed;
+      border-color:#fed7aa;
+    }
+    .question-card.completed{
+      opacity:0.7;
+    }
+    .question-number{
+      display:inline-block;
+      width:24px;
+      height:24px;
+      background:var(--accent);
+      color:white;
+      border-radius:50%;
+      text-align:center;
+      line-height:24px;
+      font-size:12px;
+      font-weight:600;
+      margin-right:8px;
+    }
+    .question-text{
+      font-weight:500;
+      margin-bottom:10px;
+      font-size:15px;
+    }
+    .response-options{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));
+      gap:8px;
+    }
+    .response-btn{
+      padding:8px 12px;
+      border:1px solid var(--border);
+      border-radius:6px;
+      background:white;
+      cursor:pointer;
+      font-size:13px;
+      transition:all 0.15s;
+    }
+    .response-btn:hover{
+      background:#f3f4f6;
+      border-color:#9ca3af;
+    }
+    .response-btn.selected{
+      background:var(--info);
+      color:white;
+      border-color:var(--info);
+    }
+    .response-btn.danger{
+      background:var(--danger);
+      color:white;
+      border-color:var(--danger);
+    }
+
+    /* Triage Decision */
+    .triage-level{
+      padding:20px;
+      border-radius:12px;
+      text-align:center;
+      margin-bottom:16px;
+      border:2px solid;
+    }
+    .triage-level.level1{
+      background:#f0fdf4;
+      border-color:var(--level1);
+      color:#14532d;
+    }
+    .triage-level.level2{
+      background:#eff6ff;
+      border-color:var(--level2);
+      color:#1e3a8a;
+    }
+    .triage-level.level3{
+      background:#fffbeb;
+      border-color:var(--level3);
+      color:#78350f;
+    }
+    .triage-level.level4{
+      background:#fef2f2;
+      border-color:var(--level4);
+      color:#7f1d1d;
+    }
+    .triage-level .level-number{
+      font-size:36px;
+      font-weight:700;
+      margin-bottom:8px;
+    }
+    .triage-level .level-desc{
+      font-size:16px;
+      font-weight:600;
+      margin-bottom:4px;
+    }
+    .triage-level .level-team{
+      font-size:13px;
+      opacity:0.9;
+    }
+
+    /* Equipment Needed */
+    .equipment-grid{
+      display:grid;
+      grid-template-columns:repeat(2, 1fr);
+      gap:8px;
+      margin-bottom:16px;
+    }
+    .equipment-item{
+      padding:8px;
+      border:1px solid var(--border);
+      border-radius:6px;
+      font-size:13px;
+      display:flex;
+      align-items:center;
+      gap:6px;
+    }
+    .equipment-item.required{
+      background:#fef3c7;
+      border-color:#fcd34d;
+    }
+    .equipment-item .check{
+      color:var(--good);
+      font-weight:600;
+    }
+
+    /* Scripts */
+    .script-box{
+      background:#f0f9ff;
+      border:1px solid #bae6fd;
+      border-radius:8px;
+      padding:12px;
+      margin-bottom:12px;
+    }
+    .script-box .label{
+      font-size:12px;
+      font-weight:600;
+      color:#075985;
+      margin-bottom:6px;
+    }
+    .script-text{
+      font-size:14px;
+      line-height:1.5;
+      font-style:italic;
+    }
+
+    /* Action Buttons */
+    .action-buttons{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-top:16px;
+    }
+    .btn{
+      padding:10px 16px;
+      border-radius:8px;
+      border:none;
+      font-weight:500;
+      cursor:pointer;
+      font-size:14px;
+      transition:all 0.15s;
+    }
+    .btn.primary{
+      background:var(--accent);
+      color:white;
+    }
+    .btn.danger{
+      background:var(--danger);
+      color:white;
+    }
+    .btn.warning{
+      background:var(--warning);
+      color:white;
+    }
+    .btn.secondary{
+      background:#6b7280;
+      color:white;
+    }
+    .btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 4px 6px rgba(0,0,0,0.1);
+    }
+    .btn:disabled{
+      opacity:0.5;
+      cursor:not-allowed;
+    }
+
+    /* Alert Banner */
+    .alert-banner{
+      background:var(--danger);
+      color:white;
+      padding:12px;
+      border-radius:8px;
+      margin-bottom:16px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      animation:pulse 2s infinite;
+    }
+    @keyframes pulse{
+      0%, 100%{opacity:1}
+      50%{opacity:0.85}
+    }
+    .alert-banner .icon{
+      font-size:24px;
+    }
+
+    /* Vitals Display */
+    .vitals-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin-bottom:16px;
+    }
+    .vital-item{
+      padding:10px;
+      background:#f9fafb;
+      border-radius:6px;
+      border:1px solid var(--border);
+    }
+    .vital-item.abnormal{
+      background:#fef2f2;
+      border-color:#fca5a5;
+    }
+    .vital-label{
+      font-size:11px;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:2px;
+    }
+    .vital-value{
+      font-size:18px;
+      font-weight:600;
+    }
+
+    /* Notes Section */
+    .notes-area{
+      width:100%;
+      min-height:80px;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius:6px;
+      font-size:13px;
+      resize:vertical;
+    }
+
+    .tag{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:4px;
+      font-size:12px;
+      margin:2px;
+    }
+    .tag.red{
+      background:#fee2e2;
+      color:#991b1b;
+    }
+    .tag.yellow{
+      background:#fef3c7;
+      color:#92400e;
+    }
+    .tag.blue{
+      background:#dbeafe;
+      color:#1e40af;
+    }
+
+    @media (max-width:1400px){
+      .container{grid-template-columns:1fr 1fr}
+      .panel:last-child{grid-column:span 2}
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo"></div>
+    <div class="title">Remote Triage Dispatcher</div>
+    <div class="status-bar">
+      <span style="opacity:0.7">Operator: Sarah M.</span>
+      <span class="timer" id="callTimer">0:00</span>
+      <button class="btn danger" style="padding:6px 12px; font-size:13px" onclick="escalateEmergency()">🚨 EMERGENCY</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Left Panel: Quick Assessment -->
+    <div class="panel">
+      <div class="panel-header">Quick Assessment</div>
+      <div class="panel-body">
+        <div style="margin-bottom:16px">
+          <div style="font-size:12px; color:var(--muted); margin-bottom:6px">PRIMARY CONCERN</div>
+          <button class="quick-btn danger" onclick="setChief('breathing')">
+            <span class="icon">🫁</span>
+            <span class="text">Can't breathe / Choking</span>
+            <span class="badge">L4</span>
+          </button>
+          <button class="quick-btn danger" onclick="setChief('chest')">
+            <span class="icon">💔</span>
+            <span class="text">Chest pain / Heart</span>
+            <span class="badge">L3-4</span>
+          </button>
+          <button class="quick-btn danger" onclick="setChief('unconscious')">
+            <span class="icon">😵</span>
+            <span class="text">Unconscious / Won't wake</span>
+            <span class="badge">L4</span>
+          </button>
+          <button class="quick-btn" onclick="setChief('stroke')">
+            <span class="icon">🧠</span>
+            <span class="text">Stroke symptoms</span>
+            <span class="badge">L4</span>
+          </button>
+          <button class="quick-btn" onclick="setChief('bleeding')">
+            <span class="icon">🩸</span>
+            <span class="text">Severe bleeding</span>
+            <span class="badge">L3-4</span>
+          </button>
+          <button class="quick-btn" onclick="setChief('injury')">
+            <span class="icon">🤕</span>
+            <span class="text">Injury / Trauma</span>
+            <span class="badge">L1-4</span>
+          </button>
+          <button class="quick-btn" onclick="setChief('fever')">
+            <span class="icon">🤒</span>
+            <span class="text">Fever / Infection</span>
+            <span class="badge">L1-3</span>
+          </button>
+          <button class="quick-btn" onclick="setChief('mental')">
+            <span class="icon">😰</span>
+            <span class="text">Mental health crisis</span>
+            <span class="badge">L2-4</span>
+          </button>
+          <button class="quick-btn" onclick="setChief('diabetic')">
+            <span class="icon">💉</span>
+            <span class="text">Diabetic emergency</span>
+            <span class="badge">L2-4</span>
+          </button>
+          <button class="quick-btn" onclick="setChief('medication')">
+            <span class="icon">💊</span>
+            <span class="text">Medication issue</span>
+            <span class="badge">L1-3</span>
+          </button>
+          <button class="quick-btn" onclick="setChief('other')">
+            <span class="icon">❓</span>
+            <span class="text">Other / Multiple</span>
+            <span class="badge">Assess</span>
+          </button>
+        </div>
+
+        <div style="margin-bottom:16px">
+          <div style="font-size:12px; color:var(--muted); margin-bottom:6px">PATIENT INFO</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px">
+            <input type="number" placeholder="Age" id="patientAge" style="padding:8px; border:1px solid var(--border); border-radius:6px">
+            <select id="patientSex" style="padding:8px; border:1px solid var(--border); border-radius:6px">
+              <option value="">Sex</option>
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+          <div style="margin-top:8px">
+            <input type="text" placeholder="Location (home, work, etc.)" id="location" style="width:100%; padding:8px; border:1px solid var(--border); border-radius:6px">
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:12px; color:var(--muted); margin-bottom:6px">QUICK VITALS (if available)</div>
+          <div class="vitals-grid">
+            <div class="vital-item" id="vital-conscious">
+              <div class="vital-label">Conscious?</div>
+              <select onchange="updateVital('conscious', this.value)" style="width:100%; border:1px solid var(--border); border-radius:4px; padding:4px">
+                <option value="">Unknown</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+                <option value="altered">Altered</option>
+              </select>
+            </div>
+            <div class="vital-item" id="vital-breathing">
+              <div class="vital-label">Breathing?</div>
+              <select onchange="updateVital('breathing', this.value)" style="width:100%; border:1px solid var(--border); border-radius:4px; padding:4px">
+                <option value="">Unknown</option>
+                <option value="normal">Normal</option>
+                <option value="difficulty">Difficulty</option>
+                <option value="not">Not breathing</option>
+              </select>
+            </div>
+            <div class="vital-item">
+              <div class="vital-label">Bleeding?</div>
+              <select onchange="updateVital('bleeding', this.value)" style="width:100%; border:1px solid var(--border); border-radius:4px; padding:4px">
+                <option value="">None visible</option>
+                <option value="minor">Minor</option>
+                <option value="moderate">Moderate</option>
+                <option value="severe">Severe</option>
+              </select>
+            </div>
+            <div class="vital-item">
+              <div class="vital-label">Pain (1-10)</div>
+              <input type="number" min="0" max="10" onchange="updateVital('pain', this.value)" style="width:100%; border:1px solid var(--border); border-radius:4px; padding:4px">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Middle Panel: Question Flow -->
+    <div class="panel">
+      <div class="panel-header">Assessment Questions</div>
+      <div class="panel-body" id="questionFlow">
+        <div class="script-box">
+          <div class="label">OPENING SCRIPT</div>
+          <div class="script-text">
+            "This is [Name] with Alula Medical Response. I understand you need medical help. I'm going to ask you a few quick questions to send the right team to help you. Are you the patient or calling for someone else?"
+          </div>
+        </div>
+        
+        <div id="dynamicQuestions">
+          <!-- Questions populate here based on chief complaint -->
+          <div style="text-align:center; padding:40px; color:var(--muted)">
+            Select a primary concern to begin assessment
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Triage Decision -->
+    <div class="panel">
+      <div class="panel-header">Dispatch Decision</div>
+      <div class="panel-body">
+        <div id="alertSection"></div>
+        
+        <div id="triageDecision">
+          <div style="text-align:center; padding:40px; color:var(--muted)">
+            Complete assessment to determine dispatch level
+          </div>
+        </div>
+
+        <div style="margin-top:20px">
+          <div style="font-size:12px; color:var(--muted); margin-bottom:8px">EQUIPMENT NEEDED</div>
+          <div class="equipment-grid" id="equipmentList">
+            <div class="equipment-item">
+              <span>📋</span> Basic vitals kit
+            </div>
+            <div class="equipment-item">
+              <span>🩺</span> Stethoscope
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px">
+          <div style="font-size:12px; color:var(--muted); margin-bottom:8px">SPECIAL INSTRUCTIONS</div>
+          <textarea class="notes-area" id="specialInstructions" placeholder="Patient location details, access codes, specific concerns..."></textarea>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn warning" onclick="dispatchTeam()" id="dispatchBtn" disabled>
+            📤 Dispatch Team
+          </button>
+          <button class="btn secondary" onclick="requestConsult()">
+            👨‍⚕️ MD Consult
+          </button>
+        </div>
+
+        <div style="margin-top:16px; padding:12px; background:#f3f4f6; border-radius:8px">
+          <div style="font-size:11px; color:var(--muted); margin-bottom:4px">RESPONSE TIMES</div>
+          <div style="font-size:13px">
+            <div>L1: 30-60 min</div>
+            <div>L2: 20-30 min</div>
+            <div>L3: 15-20 min</div>
+            <div>L4: Immediate (911)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// Question database for each chief complaint
+const questionFlows = {
+  breathing: {
+    immediate911: true,
+    questions: [
+      {
+        text: "Is the patient able to speak in complete sentences?",
+        options: [
+          {text: "Yes", value: 0},
+          {text: "Few words only", value: 2},
+          {text: "Cannot speak", value: 4},
+          {text: "Unconscious", value: 5}
+        ]
+      },
+      {
+        text: "Are their lips or face turning blue?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Slightly", value: 2},
+          {text: "Yes, blue/purple", value: 4}
+        ]
+      },
+      {
+        text: "Is this related to choking?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Possibly", value: 2},
+          {text: "Yes, actively choking", value: 5}
+        ]
+      },
+      {
+        text: "Do they have asthma, COPD, or other lung conditions?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Yes, controlled", value: 1},
+          {text: "Yes, uses oxygen", value: 2},
+          {text: "Yes, multiple hospitalizations", value: 3}
+        ]
+      }
+    ],
+    equipment: ["Oxygen", "Suction", "BVM", "Pulse oximeter", "Nebulizer", "CPAP", "Epinephrine"]
+  },
+  
+  chest: {
+    questions: [
+      {
+        text: "How would they describe the chest pain?",
+        options: [
+          {text: "Mild discomfort", value: 0},
+          {text: "Sharp/stabbing", value: 1},
+          {text: "Pressure/squeezing", value: 3},
+          {text: "Crushing/elephant on chest", value: 4}
+        ]
+      },
+      {
+        text: "How long has the pain been present?",
+        options: [
+          {text: "Just started", value: 1},
+          {text: "< 5 minutes", value: 1},
+          {text: "5-15 minutes", value: 2},
+          {text: "> 15 minutes", value: 3}
+        ]
+      },
+      {
+        text: "Any of these symptoms? (Sweating, nausea, jaw/arm pain, shortness of breath)",
+        options: [
+          {text: "None", value: 0},
+          {text: "One symptom", value: 2},
+          {text: "Multiple symptoms", value: 4}
+        ]
+      },
+      {
+        text: "History of heart problems?",
+        options: [
+          {text: "No", value: 0},
+          {text: "High blood pressure/cholesterol", value: 1},
+          {text: "Previous heart issues", value: 2},
+          {text: "Previous heart attack/stents", value: 3}
+        ]
+      },
+      {
+        text: "Does the pain change with movement or breathing?",
+        options: [
+          {text: "No change", value: 2},
+          {text: "Worse with deep breath", value: 0},
+          {text: "Worse with movement", value: 0},
+          {text: "Better with rest", value: 1}
+        ]
+      }
+    ],
+    equipment: ["EKG/ECG", "Aspirin", "Nitroglycerin", "Oxygen", "IV kit", "Cardiac monitor", "Defibrillator"]
+  },
+
+  fall: {
+    questions: [
+      {
+        text: "Did they hit their head?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Yes, minor bump", value: 1},
+          {text: "Yes, hard impact", value: 3},
+          {text: "Yes, lost consciousness", value: 5}
+        ]
+      },
+      {
+        text: "Are they on blood thinners? (warfarin, Eliquis, Xarelto, aspirin)",
+        options: [
+          {text: "No", value: 0},
+          {text: "Just aspirin", value: 1},
+          {text: "Yes, prescription blood thinner", value: 3},
+          {text: "Unknown", value: 2}
+        ]
+      },
+      {
+        text: "Can they move all limbs?",
+        options: [
+          {text: "Yes, normally", value: 0},
+          {text: "Yes, but painful", value: 1},
+          {text: "Limited movement", value: 3},
+          {text: "Cannot move one or more", value: 5}
+        ]
+      },
+      {
+        text: "Any obvious deformity or bleeding?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Minor cuts/bruising", value: 1},
+          {text: "Large bruise/swelling", value: 2},
+          {text: "Obvious deformity", value: 3},
+          {text: "Severe bleeding", value: 4}
+        ]
+      },
+      {
+        text: "How did the fall happen?",
+        options: [
+          {text: "Tripped/mechanical fall", value: 0},
+          {text: "Felt dizzy first", value: 2},
+          {text: "Legs gave out", value: 2},
+          {text: "Passed out/unknown", value: 3}
+        ]
+      }
+    ],
+    equipment: ["C-collar", "Backboard", "Splints", "Bandages", "Ice packs", "Wound care", "Suture kit"]
+  },
+
+  stroke: {
+    immediate911: true,
+    questions: [
+      {
+        text: "Can they smile normally? (Both sides of face)",
+        options: [
+          {text: "Yes, normal", value: 0},
+          {text: "Slightly uneven", value: 3},
+          {text: "One side drooping", value: 5}
+        ]
+      },
+      {
+        text: "Can they raise both arms and keep them up?",
+        options: [
+          {text: "Yes, equally", value: 0},
+          {text: "One arm drifts down", value: 4},
+          {text: "Cannot raise one/both", value: 5}
+        ]
+      },
+      {
+        text: "Is their speech normal?",
+        options: [
+          {text: "Yes, clear", value: 0},
+          {text: "Slightly slurred", value: 3},
+          {text: "Very slurred/garbled", value: 4},
+          {text: "Cannot speak", value: 5}
+        ]
+      },
+      {
+        text: "When did symptoms start?",
+        options: [
+          {text: "< 1 hour ago", value: 5},
+          {text: "1-3 hours ago", value: 4},
+          {text: "3-6 hours ago", value: 3},
+          {text: "> 6 hours ago", value: 2}
+        ]
+      },
+      {
+        text: "Any severe headache with this?",
+        options: [
+          {text: "No headache", value: 0},
+          {text: "Mild headache", value: 1},
+          {text: "Severe headache", value: 3},
+          {text: "Worst headache of life", value: 5}
+        ]
+      }
+    ],
+    equipment: ["Blood pressure cuff", "Glucose meter", "Stroke kit", "IV access", "Cincinnati stroke scale card"]
+  },
+
+  fever: {
+    questions: [
+      {
+        text: "How high is the fever?",
+        options: [
+          {text: "99-100°F", value: 0},
+          {text: "101-102°F", value: 1},
+          {text: "103-104°F", value: 2},
+          {text: "Over 104°F", value: 3},
+          {text: "Unknown but burning up", value: 2}
+        ]
+      },
+      {
+        text: "Any confusion or difficulty staying awake?",
+        options: [
+          {text: "No, alert", value: 0},
+          {text: "Slightly confused", value: 2},
+          {text: "Very confused", value: 3},
+          {text: "Hard to wake up", value: 5}
+        ]
+      },
+      {
+        text: "Any difficulty breathing or chest pain?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Mild", value: 1},
+          {text: "Moderate", value: 2},
+          {text: "Severe", value: 4}
+        ]
+      },
+      {
+        text: "Any chronic conditions? (diabetes, heart disease, cancer, etc.)",
+        options: [
+          {text: "None", value: 0},
+          {text: "One condition", value: 1},
+          {text: "Multiple conditions", value: 2},
+          {text: "Immunocompromised/chemo", value: 3}
+        ]
+      },
+      {
+        text: "Any rash with the fever?",
+        options: [
+          {text: "No rash", value: 0},
+          {text: "Minor rash", value: 1},
+          {text: "Widespread rash", value: 2},
+          {text: "Purple/bruise-like rash", value: 5}
+        ]
+      }
+    ],
+    equipment: ["Thermometer", "IV fluids", "Antibiotics", "Blood culture kit", "Pulse oximeter", "Antipyretics"]
+  },
+
+  unconscious: {
+    immediate911: true,
+    questions: [
+      {
+        text: "Are they breathing?",
+        options: [
+          {text: "Yes, normally", value: 2},
+          {text: "Yes, but shallow", value: 3},
+          {text: "Gasping/irregular", value: 5},
+          {text: "No", value: 5}
+        ]
+      },
+      {
+        text: "Do they respond to loud voice or gentle shake?",
+        options: [
+          {text: "Yes, wakes up", value: 1},
+          {text: "Moans/moves", value: 3},
+          {text: "No response", value: 5}
+        ]
+      },
+      {
+        text: "Any known cause? (fall, drugs, diabetic, etc.)",
+        options: [
+          {text: "Unknown", value: 2},
+          {text: "Diabetic", value: 3},
+          {text: "Possible overdose", value: 4},
+          {text: "Head injury", value: 5}
+        ]
+      },
+      {
+        text: "Color of skin/lips?",
+        options: [
+          {text: "Normal", value: 0},
+          {text: "Pale", value: 2},
+          {text: "Blue/purple", value: 5},
+          {text: "Grey", value: 5}
+        ]
+      }
+    ],
+    equipment: ["BVM", "Oxygen", "Suction", "Glucose", "Narcan", "IV access", "Cardiac monitor"]
+  },
+
+  bleeding: {
+    questions: [
+      {
+        text: "Where is the bleeding from?",
+        options: [
+          {text: "Small cut", value: 0},
+          {text: "Large wound", value: 2},
+          {text: "Head/face", value: 3},
+          {text: "Chest/abdomen", value: 4},
+          {text: "Multiple sites", value: 4}
+        ]
+      },
+      {
+        text: "How much blood? (use common objects for reference)",
+        options: [
+          {text: "Few drops", value: 0},
+          {text: "Tablespoon", value: 1},
+          {text: "Cup", value: 3},
+          {text: "Continuously flowing", value: 4},
+          {text: "Pooling on floor", value: 5}
+        ]
+      },
+      {
+        text: "Can you control it with direct pressure?",
+        options: [
+          {text: "Yes, stopped", value: 0},
+          {text: "Slowing down", value: 1},
+          {text: "Still bleeding through", value: 3},
+          {text: "Cannot control", value: 5}
+        ]
+      },
+      {
+        text: "Is the patient dizzy or confused?",
+        options: [
+          {text: "No, alert", value: 0},
+          {text: "Slightly dizzy", value: 2},
+          {text: "Very dizzy/weak", value: 3},
+          {text: "Passing out", value: 5}
+        ]
+      },
+      {
+        text: "Are they on blood thinners?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Aspirin only", value: 1},
+          {text: "Yes", value: 2},
+          {text: "Unknown", value: 1}
+        ]
+      }
+    ],
+    equipment: ["Pressure dressings", "Tourniquets", "Hemostatic agents", "IV kit", "Blood products", "Trauma kit"]
+  },
+
+  diabetic: {
+    questions: [
+      {
+        text: "Is the patient conscious and responsive?",
+        options: [
+          {text: "Yes, fully alert", value: 0},
+          {text: "Drowsy but responsive", value: 2},
+          {text: "Confused", value: 3},
+          {text: "Unconscious", value: 5}
+        ]
+      },
+      {
+        text: "Do you have a blood sugar reading?",
+        options: [
+          {text: "70-180 mg/dL", value: 0},
+          {text: "50-70 mg/dL", value: 2},
+          {text: "< 50 mg/dL", value: 4},
+          {text: "250-400 mg/dL", value: 2},
+          {text: "> 400 mg/dL", value: 3},
+          {text: "No meter available", value: 1}
+        ]
+      },
+      {
+        text: "Any vomiting or abdominal pain?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Nausea only", value: 1},
+          {text: "Vomited once", value: 2},
+          {text: "Repeated vomiting", value: 3},
+          {text: "Severe pain + vomiting", value: 4}
+        ]
+      },
+      {
+        text: "Are they sweating or shaking?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Mild sweating", value: 1},
+          {text: "Profuse sweating", value: 3},
+          {text: "Shaking/tremors", value: 3}
+        ]
+      },
+      {
+        text: "When did they last eat and take insulin/medication?",
+        options: [
+          {text: "Normal schedule", value: 0},
+          {text: "Missed one meal", value: 1},
+          {text: "Haven't eaten today", value: 2},
+          {text: "Took extra insulin", value: 3},
+          {text: "Unknown/can't remember", value: 2}
+        ]
+      }
+    ],
+    equipment: ["Glucometer", "Glucose gel/tablets", "Glucagon", "D50", "Insulin", "Ketone strips", "IV fluids"]
+  },
+
+  mental: {
+    questions: [
+      {
+        text: "Is there immediate danger to self or others?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Thoughts only", value: 2},
+          {text: "Has a plan", value: 3},
+          {text: "Has means available", value: 4},
+          {text: "Attempting now", value: 5}
+        ]
+      },
+      {
+        text: "Are they cooperative with help?",
+        options: [
+          {text: "Yes, wants help", value: 0},
+          {text: "Ambivalent", value: 1},
+          {text: "Resistant but calm", value: 2},
+          {text: "Agitated/angry", value: 3},
+          {text: "Combative/violent", value: 5}
+        ]
+      },
+      {
+        text: "Any substance use involved?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Possibly", value: 1},
+          {text: "Alcohol intoxicated", value: 2},
+          {text: "Drug intoxicated", value: 3},
+          {text: "Overdose concern", value: 5}
+        ]
+      },
+      {
+        text: "Any bizarre behavior or not making sense?",
+        options: [
+          {text: "No, thinking clearly", value: 0},
+          {text: "Some confusion", value: 1},
+          {text: "Not making sense", value: 2},
+          {text: "Hallucinating", value: 3},
+          {text: "Completely disconnected", value: 4}
+        ]
+      },
+      {
+        text: "History of mental health issues?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Depression/anxiety", value: 1},
+          {text: "Previous attempts", value: 3},
+          {text: "Bipolar/schizophrenia", value: 2},
+          {text: "Recent discharge", value: 2}
+        ]
+      }
+    ],
+    equipment: ["Restraints", "Sedatives", "Narcan", "Crisis counselor", "Chemical restraints", "Police backup"]
+  },
+
+  medication: {
+    questions: [
+      {
+        text: "What type of medication issue?",
+        options: [
+          {text: "Ran out", value: 0},
+          {text: "Side effects", value: 1},
+          {text: "Took wrong dose", value: 2},
+          {text: "Took wrong medicine", value: 3},
+          {text: "Intentional overdose", value: 5}
+        ]
+      },
+      {
+        text: "What kind of medication?",
+        options: [
+          {text: "Blood pressure/cholesterol", value: 1},
+          {text: "Diabetes medicine", value: 2},
+          {text: "Pain medication", value: 3},
+          {text: "Heart/blood thinner", value: 3},
+          {text: "Psychiatric medication", value: 2}
+        ]
+      },
+      {
+        text: "Any symptoms now?",
+        options: [
+          {text: "No symptoms", value: 0},
+          {text: "Mild symptoms", value: 1},
+          {text: "Moderate symptoms", value: 2},
+          {text: "Severe symptoms", value: 4},
+          {text: "Unconscious", value: 5}
+        ]
+      },
+      {
+        text: "When did this happen?",
+        options: [
+          {text: "Just now", value: 2},
+          {text: "< 1 hour ago", value: 1},
+          {text: "1-4 hours ago", value: 1},
+          {text: "> 4 hours ago", value: 0},
+          {text: "Unknown", value: 2}
+        ]
+      },
+      {
+        text: "Have they vomited since?",
+        options: [
+          {text: "No", value: 0},
+          {text: "Once", value: 1},
+          {text: "Multiple times", value: 2},
+          {text: "Can't keep anything down", value: 3}
+        ]
+      }
+    ],
+    equipment: ["Activated charcoal", "Narcan", "Poison control info", "IV access", "Cardiac monitor", "Antidotes"]
+  },
+
+  injury: {
+    questions: [
+      {
+        text: "What type of injury?",
+        options: [
+          {text: "Cut/laceration", value: 1},
+          {text: "Burn", value: 2},
+          {text: "Broken bone suspected", value: 2},
+          {text: "Eye injury", value: 3},
+          {text: "Penetrating injury", value: 5}
+        ]
+      },
+      {
+        text: "Where on the body is the injury?",
+        options: [
+          {text: "Arms/legs", value: 0},
+          {text: "Hands/feet", value: 1},
+          {text: "Head/face/neck", value: 3},
+          {text: "Chest/abdomen/back", value: 4},
+          {text: "Multiple areas", value: 3}
+        ]
+      },
+      {
+        text: "How did it happen?",
+        options: [
+          {text: "Minor accident", value: 0},
+          {text: "Work/tool injury", value: 1},
+          {text: "Motor vehicle", value: 3},
+          {text: "Assault", value: 3},
+          {text: "High impact/height", value: 4}
+        ]
+      },
+      {
+        text: "Pain level and movement?",
+        options: [
+          {text: "Mild pain, full movement", value: 0},
+          {text: "Moderate pain, some movement", value: 1},
+          {text: "Severe pain, limited movement", value: 2},
+          {text: "Cannot move area", value: 3},
+          {text: "No feeling in area", value: 4}
+        ]
+      },
+      {
+        text: "Any numbness, tingling, or color changes?",
+        options: [
+          {text: "None", value: 0},
+          {text: "Slight tingling", value: 1},
+          {text: "Numbness", value: 2},
+          {text: "Cold/pale/blue", value: 4},
+          {text: "Cannot feel anything", value: 5}
+        ]
+      }
+    ],
+    equipment: ["Wound care kit", "Splints", "Burn dressings", "Eye shield", "Tetanus vaccine", "X-ray capability", "Orthopedic supplies"]
+  },
+
+  other: {
+    questions: [
+      {
+        text: "What is the main problem?",
+        options: [
+          {text: "Pain (not chest)", value: 1},
+          {text: "Nausea/vomiting", value: 1},
+          {text: "Urinary problems", value: 0},
+          {text: "Swelling", value: 1},
+          {text: "Multiple problems", value: 2}
+        ]
+      },
+      {
+        text: "How long has this been going on?",
+        options: [
+          {text: "Just started", value: 2},
+          {text: "Few hours", value: 1},
+          {text: "Since yesterday", value: 1},
+          {text: "Few days", value: 0},
+          {text: "Weeks", value: 0}
+        ]
+      },
+      {
+        text: "Rate the severity (1-10 scale)",
+        options: [
+          {text: "1-3 (mild)", value: 0},
+          {text: "4-6 (moderate)", value: 1},
+          {text: "7-8 (severe)", value: 2},
+          {text: "9-10 (worst)", value: 3}
+        ]
+      },
+      {
+        text: "Any fever, breathing issues, or chest pain?",
+        options: [
+          {text: "None", value: 0},
+          {text: "One of these", value: 2},
+          {text: "Multiple", value: 3}
+        ]
+      },
+      {
+        text: "Are they able to eat and drink?",
+        options: [
+          {text: "Yes, normally", value: 0},
+          {text: "Small amounts", value: 1},
+          {text: "Cannot keep down", value: 2},
+          {text: "Refusing/unable", value: 3}
+        ]
+      }
+    ],
+    equipment: ["Basic assessment kit", "IV fluids", "Pain medications", "Antiemetics", "Diagnostic tools"]
+  }
+};
+
+// State management
+let currentComplaint = null;
+let assessmentScore = 0;
+let responses = {};
+let triageLevel = null;
+let startTime = Date.now();
+
+// Timer
+setInterval(() => {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const minutes = Math.floor(elapsed / 60);
+  const seconds = elapsed % 60;
+  document.getElementById('callTimer').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}, 1000);
+
+// Set chief complaint
+function setChief(complaint) {
+  currentComplaint = complaint;
+  assessmentScore = 0;
+  responses = {};
+  
+  // Highlight selected button
+  document.querySelectorAll('.quick-btn').forEach(btn => btn.classList.remove('selected'));
+  event.target.closest('.quick-btn').classList.add('selected');
+  
+  // Load questions
+  const flow = questionFlows[complaint];
+  if (!flow) {
+    document.getElementById('dynamicQuestions').innerHTML = '<div style="padding:20px; color:var(--danger)">Assessment flow not yet configured for this complaint.</div>';
+    return;
+  }
+  
+  // Check for immediate 911
+  if (flow.immediate911) {
+    showAlert('⚠️ HIGH PRIORITY - Consider immediate 911 dispatch while completing assessment');
+  }
+  
+  // Display questions
+  let html = '';
+  flow.questions.forEach((q, idx) => {
+    html += `
+      <div class="question-card ${idx === 0 ? 'active' : ''}" id="question-${idx}">
+        <div class="question-text">
+          <span class="question-number">${idx + 1}</span>
+          ${q.text}
+        </div>
+        <div class="response-options">
+          ${q.options.map(opt => `
+            <button class="response-btn ${opt.value >= 4 ? 'danger' : ''}" 
+                    onclick="recordResponse(${idx}, ${opt.value}, '${opt.text}')">
+              ${opt.text}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  });
+  
+  document.getElementById('dynamicQuestions').innerHTML = html;
+  updateEquipment(flow.equipment || []);
+}
+
+// Record response
+function recordResponse(questionIdx, value, text) {
+  responses[questionIdx] = {value, text};
+  assessmentScore += value;
+  
+  // Mark question complete
+  document.getElementById(`question-${questionIdx}`).classList.add('completed');
+  
+  // Activate next question
+  const nextQuestion = document.getElementById(`question-${questionIdx + 1}`);
+  if (nextQuestion) {
+    nextQuestion.classList.add('active');
+  } else {
+    // All questions answered - calculate triage
+    calculateTriage();
+  }
+  
+  // Update button states
+  event.target.classList.add('selected');
+  event.target.parentElement.querySelectorAll('.response-btn').forEach(btn => {
+    if (btn !== event.target) btn.disabled = true;
+  });
+}
+
+// Calculate triage level
+function calculateTriage() {
+  const age = parseInt(document.getElementById('patientAge').value) || 0;
+  const ageMultiplier = age > 65 ? 1.2 : age < 5 ? 1.3 : 1;
+  const finalScore = assessmentScore * ageMultiplier;
+  
+  // Determine level
+  if (finalScore >= 15 || currentComplaint === 'unconscious') {
+    triageLevel = 4;
+  } else if (finalScore >= 10) {
+    triageLevel = 3;
+  } else if (finalScore >= 5) {
+    triageLevel = 2;
+  } else {
+    triageLevel = 1;
+  }
+  
+  // Special upgrades
+  const conscious = document.querySelector('#vital-conscious select').value;
+  const breathing = document.querySelector('#vital-breathing select').value;
+  if (conscious === 'no' || breathing === 'not') {
+    triageLevel = 4;
+  }
+  
+  displayTriageDecision();
+}
+
+// Display triage decision
+function displayTriageDecision() {
+  const levels = {
+    1: {
+      title: "Level 1 - Non-Urgent",
+      team: "EMT + Virtual NP",
+      color: "level1",
+      response: "30-60 minutes",
+      equipment: ["Basic vitals", "Tablet for video"]
+    },
+    2: {
+      title: "Level 2 - Urgent",
+      team: "Onsite NP/PA",
+      color: "level2", 
+      response: "20-30 minutes",
+      equipment: ["Diagnostic kit", "Medications", "POC testing"]
+    },
+    3: {
+      title: "Level 3 - Emergent",
+      team: "EMT + NP/PA Team",
+      color: "level3",
+      response: "15-20 minutes",
+      equipment: ["Full ALS kit", "Medications", "Monitor"]
+    },
+    4: {
+      title: "Level 4 - Critical",
+      team: "911 Dispatch / ER",
+      color: "level4",
+      response: "Immediate",
+      equipment: ["Full emergency response"]
+    }
+  };
+  
+  const level = levels[triageLevel];
+  
+  let html = `
+    <div class="triage-level ${level.color}">
+      <div class="level-number">LEVEL ${triageLevel}</div>
+      <div class="level-desc">${level.title}</div>
+      <div class="level-team">${level.team}</div>
+      <div style="margin-top:8px; font-size:12px">Response: ${level.response}</div>
+    </div>
+  `;
+  
+  if (triageLevel === 4) {
+    html += `
+      <div class="script-box" style="background:#fef2f2; border-color:#fca5a5">
+        <div class="label" style="color:#991b1b">911 TRANSFER SCRIPT</div>
+        <div class="script-text" style="color:#991b1b">
+          "I'm going to connect you with 911 now for immediate help. Stay on the line, and I'll brief them on your situation. Do not hang up."
+        </div>
+      </div>
+    `;
+  }
+  
+  document.getElementById('triageDecision').innerHTML = html;
+  document.getElementById('dispatchBtn').disabled = false;
+  
+  if (triageLevel === 4) {
+    document.getElementById('dispatchBtn').textContent = '🚨 Connect to 911';
+    document.getElementById('dispatchBtn').className = 'btn danger';
+  }
+}
+
+// Update equipment list
+function updateEquipment(equipment) {
+  let html = '';
+  equipment.forEach(item => {
+    html += `
+      <div class="equipment-item required">
+        <span class="check">✓</span> ${item}
+      </div>
+    `;
+  });
+  document.getElementById('equipmentList').innerHTML = html;
+}
+
+// Update vital
+function updateVital(vital, value) {
+  const element = document.getElementById(`vital-${vital}`);
+  if (value === 'no' || value === 'not' || value === 'altered' || value === 'severe') {
+    element.classList.add('abnormal');
+    if (assessmentScore > 0) calculateTriage(); // Recalculate if already assessed
+  }
+}
+
+// Show alert
+function showAlert(message) {
+  document.getElementById('alertSection').innerHTML = `
+    <div class="alert-banner">
+      <span class="icon">⚠️</span>
+      <div>${message}</div>
+    </div>
+  `;
+}
+
+// Dispatch team
+function dispatchTeam() {
+  const notes = document.getElementById('specialInstructions').value;
+  const age = document.getElementById('patientAge').value;
+  const location = document.getElementById('location').value;
+  
+  const dispatch = {
+    level: triageLevel,
+    complaint: currentComplaint,
+    age: age,
+    location: location,
+    responses: responses,
+    notes: notes,
+    timestamp: new Date().toISOString()
+  };
+  
+  console.log('Dispatching:', dispatch);
+  alert(`Level ${triageLevel} team dispatched!\n\nEstimated arrival: ${triageLevel === 4 ? 'Immediate' : triageLevel === 3 ? '15-20 min' : triageLevel === 2 ? '20-30 min' : '30-60 min'}`);
+}
+
+// Emergency escalation
+function escalateEmergency() {
+  if (confirm('Escalate to 911 immediately?')) {
+    triageLevel = 4;
+    displayTriageDecision();
+    showAlert('🚨 EMERGENCY PROTOCOL ACTIVATED - Connecting to 911');
+  }
+}
+
+// Request consult
+function requestConsult() {
+  alert('Connecting to on-call physician...');
+}
+</script>
+</body>
+</html>
