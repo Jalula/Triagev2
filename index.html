@@ -459,8 +459,13 @@
             <span class="text">Severe bleeding</span>
             <span class="badge">L3-4</span>
           </button>
-          <button class="quick-btn" onclick="setChief('injury')">
+          <button class="quick-btn" onclick="setChief('fall')">
             <span class="icon">🤕</span>
+            <span class="text">Fall</span>
+            <span class="badge">L1-4</span>
+          </button>
+          <button class="quick-btn" onclick="setChief('injury')">
+            <span class="icon">🩹</span>
             <span class="text">Injury / Trauma</span>
             <span class="badge">L1-4</span>
           </button>
@@ -1123,62 +1128,6 @@ const questionFlows = {
       }
     ],
     equipment: ["Activated charcoal", "Narcan", "Poison control info", "IV access", "Cardiac monitor", "Antidotes"]
-  },
-
-  injury: {
-    questions: [
-      {
-        text: "What type of injury?",
-        options: [
-          {text: "Cut/laceration", value: 1},
-          {text: "Burn", value: 2},
-          {text: "Broken bone suspected", value: 2},
-          {text: "Eye injury", value: 3},
-          {text: "Penetrating injury", value: 5}
-        ]
-      },
-      {
-        text: "Where on the body is the injury?",
-        options: [
-          {text: "Arms/legs", value: 0},
-          {text: "Hands/feet", value: 1},
-          {text: "Head/face/neck", value: 3},
-          {text: "Chest/abdomen/back", value: 4},
-          {text: "Multiple areas", value: 3}
-        ]
-      },
-      {
-        text: "How did it happen?",
-        options: [
-          {text: "Minor accident", value: 0},
-          {text: "Work/tool injury", value: 1},
-          {text: "Motor vehicle", value: 3},
-          {text: "Assault", value: 3},
-          {text: "High impact/height", value: 4}
-        ]
-      },
-      {
-        text: "Pain level and movement?",
-        options: [
-          {text: "Mild pain, full movement", value: 0},
-          {text: "Moderate pain, some movement", value: 1},
-          {text: "Severe pain, limited movement", value: 2},
-          {text: "Cannot move area", value: 3},
-          {text: "No feeling in area", value: 4}
-        ]
-      },
-      {
-        text: "Any numbness, tingling, or color changes?",
-        options: [
-          {text: "None", value: 0},
-          {text: "Slight tingling", value: 1},
-          {text: "Numbness", value: 2},
-          {text: "Cold/pale/blue", value: 4},
-          {text: "Cannot feel anything", value: 5}
-        ]
-      }
-    ],
-    equipment: ["Wound care kit", "Splints", "Burn dressings", "Eye shield", "Tetanus vaccine", "X-ray capability", "Orthopedic supplies"]
   },
 
   other: {
